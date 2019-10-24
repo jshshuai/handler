@@ -30,28 +30,28 @@ Handler::Handler():Handler(NULL){};
 
 Handler::Handler(MessageCallback cb):stop(false),stopWhenEmpty(false),mWaitState(TASK_WAIT_STATE_NONE_E){
     msgCb = cb;
-	looper = std::thread(
-		[this](){
+    looper = std::thread(
+        [this](){
             cout << "handler thread in" << endl;
-			for(;;)
-			{
-				Message msg;
-				{
-					std::unique_lock<std::mutex> lock(this->queue_mutex);
-					if(this->msg_Q.empty()){
-                        cout << "msg_Q empty , wait..." << endl;
-						this->condition.wait(lock, [this]{  return (this->stop || this->stopWhenEmpty || !this->msg_Q.empty());});
-                        mWaitState = TASK_WAIT_STATE_REFRESH_E;
+            for(;;)
+            {
+                Message msg;
+                {
+                    std::unique_lock<std::mutex> lock(this->queue_mutex);
+                    if(this->msg_Q.empty()){
+                    cout << "msg_Q empty , wait..." << endl;
+                    this->condition.wait(lock, [this]{  return (this->stop || this->stopWhenEmpty || !this->msg_Q.empty());});
+                    mWaitState = TASK_WAIT_STATE_REFRESH_E;
 //                        cout << "msg_Q empty , wait success " << endl;
 //                        this->condition.wait(lock, [this]{
 //                            bool bBreak = (this->stop || this->stopWhenEmpty || !this->msg_Q.empty());
 //                            return bBreak;
 //                        });
-					}else{
+                    }else{
 //                        chrono::system_clock::time_point beginTime = std::chrono::system_clock::now();
 //                        cout << "msg_Q is not empty, now clock : " << std::chrono::system_clock::to_time_t(beginTime) << endl;
 //                        cout << "msg_Q is not empty, msg_Q.back().when : " << std::chrono::system_clock::to_time_t(this->msg_Q.back().when) << endl;
-						this->condition.wait_until(lock, this->msg_Q.back().when, [this]{ return (this->stop || this->stopWhenEmpty || this->mWaitState != TASK_WAIT_STATE_NONE_E);/*|| !this->msg_Q.empty();*/ });
+                          this->condition.wait_until(lock, this->msg_Q.back().when, [this]{ return (this->stop || this->stopWhenEmpty || this->mWaitState != TASK_WAIT_STATE_NONE_E);/*|| !this->msg_Q.empty();*/ });
 //                        cout << "msg_Q  wait_until success" << endl;
 //                        this->condition.wait_until(lock, this->msg_Q.back().when, [this]{
 //                            bool bBreak = (this->stop || this->stopWhenEmpty || this->mWaitState != TASK_WAIT_STATE_NONE_E);
@@ -62,16 +62,16 @@ Handler::Handler(MessageCallback cb):stop(false),stopWhenEmpty(false),mWaitState
  //                       cout << "msg when time : " << std::chrono::system_clock::to_time_t(this->msg_Q.back().when) << endl;
                     }
 
-					if(this->stopWhenEmpty && this->msg_Q.empty()) {
+                    if(this->stopWhenEmpty && this->msg_Q.empty()) {
                         cout << " handle thread stopWhenEmpty , end" << endl;
                         return;
                     }
 
-					if(stop){
-						msg_Q.clear();
+                    if(stop){
+                        msg_Q.clear();
                         cout << " handle thread stop , end" << endl;
-						return;
-					}
+                        return;
+                    }
 
                     if(mWaitState == TASK_WAIT_STATE_REFRESH_E){
                         mWaitState = TASK_WAIT_STATE_NONE_E;
@@ -79,12 +79,12 @@ Handler::Handler(MessageCallback cb):stop(false),stopWhenEmpty(false),mWaitState
                         continue;
                     }
                     mWaitState = TASK_WAIT_STATE_NONE_E;
-					msg = std::move(msg_Q.back());
-					msg_Q.pop_back();
-				}
-				this->dispatchMessage(msg);
-			}
-		});
+                    msg = std::move(msg_Q.back());
+                    msg_Q.pop_back();
+                }
+                this->dispatchMessage(msg);
+            }
+        });
 }
 Handler::~Handler(){
 	{
@@ -94,7 +94,6 @@ Handler::~Handler(){
 	condition.notify_all();
 	looper.join();
 	msg_Q.clear();
-
 }
 
 bool Handler::setMsgCallback(MessageCallback cb){
@@ -171,7 +170,7 @@ bool Handler::__syncMoidfyMsgQueue(bool bAdd, Message msg, int timeout){
 
 
 void Handler::handleMessage(Message& msg){
-	std::cout << "IN Handler " << __func__<< " what:" << msg.m_what <<  std::endl;
+    std::cout << "IN Handler " << __func__<< " what:" << msg.m_what <<  std::endl;
     if(msgCb != NULL)
     {
         msgCb(msg);
@@ -179,49 +178,49 @@ void Handler::handleMessage(Message& msg){
 }
 
 bool Handler::sendMessageAtTime(Message& msg, long uptimeMillis){
-	if(uptimeMillis < 0 )
-		return false;
+    if(uptimeMillis < 0 )
+        return false;
     __syncMoidfyMsgQueue(true, msg, uptimeMillis);
-	return true;
+    return true;
 }
 
 bool Handler::sendMessage(Message& msg){
     __syncMoidfyMsgQueue(true, msg, 0);
-	return true;
+    return true;
 }
 
 bool Handler::sendEmptyMessage(int what){
-	return sendEmptyMessage(what ,0);
+    return sendEmptyMessage(what ,0);
 }
 
 bool Handler::sendEmptyMessage(int what,long uptimeMillis){
-	if(what < 0 || uptimeMillis < 0)
-		return false;
+    if(what < 0 || uptimeMillis < 0)
+        return false;
 
-	Message msg(what);
+    Message msg(what);
     __syncMoidfyMsgQueue(true, msg, uptimeMillis);
-	return true;
+    return true;
 }
 
 bool Handler::post(Message::Function f){
-	return postAtTime(f,0);
+    return postAtTime(f,0);
 }
 bool Handler::postAtTime(Message::Function f, long uptimeMillis){
-	if(f == nullptr || uptimeMillis < 0){
-		return false;
-	}
-	Message msg;
-	msg.setFunction(f);
+    if(f == nullptr || uptimeMillis < 0){
+        return false;
+    }
+    Message msg;
+    msg.setFunction(f);
     cout << "postAtTime " << uptimeMillis << endl;
     __syncMoidfyMsgQueue(true, msg, uptimeMillis);
-	return true;
+    return true;
 }
 
 void Handler::removeMessages(int what){
-	if(what < 0)
-		return;
+    if(what < 0)
+        return;
+    
     Message msg(what);
-
     __syncMoidfyMsgQueue(false, msg, 0);
 }
 
@@ -233,28 +232,28 @@ void Handler::removeCallbackAndMessages(){
 
 //根据目前的实现安全退出，未完成的指令会快速执行到，不会有timeout的过程. 2019-10-22
 void Handler::stopSafty(bool stopSafty){
-	std::unique_lock<std::mutex> lock(queue_mutex);
-	if(stopSafty){
-		stopWhenEmpty = true;
-	}else{
-		stop = true;
-	}
+    std::unique_lock<std::mutex> lock(queue_mutex);
+    if(stopSafty){
+        stopWhenEmpty = true;
+    }else{
+        stop = true;
+    }
 }
 
 
 bool Handler::isQuiting(){
-	std::unique_lock<std::mutex> lock(queue_mutex);
-	if(stop || stopWhenEmpty)
-		return true;
-	return false;
+    std::unique_lock<std::mutex> lock(queue_mutex);
+    if(stop || stopWhenEmpty)
+        return true;
+    return false;
 }
 
 void Handler::dispatchMessage(Message& msg){
-	if(msg.task != nullptr){
-		msg.task();
-	}else{
-		if(msg.m_what < 0)
-			return;
-		handleMessage(msg);
-	}
+    if(msg.task != nullptr){
+        msg.task();
+    }else{
+        if(msg.m_what < 0)
+            return;
+        handleMessage(msg);
+    }
 }

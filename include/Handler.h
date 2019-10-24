@@ -26,68 +26,66 @@
 class Handler{
 
 public:
-	typedef enum TaskWiatStates{
-		TASK_WAIT_STATE_NONE_E = 0,
-		TASK_WAIT_STATE_REFRESH_E,   //refresh
-		TASK_WAIT_STATE_EXIT_E
-	}TASK_WAIT_STATE_E;
+    typedef enum TaskWiatStates{
+        TASK_WAIT_STATE_NONE_E = 0,
+        TASK_WAIT_STATE_REFRESH_E,   //refresh
+        TASK_WAIT_STATE_EXIT_E
+    }TASK_WAIT_STATE_E;
 
     typedef std::function<void(Message& msg)> MessageCallback;
 
 public:
-	Handler();
+    Handler();
     Handler(MessageCallback cb);
-	virtual ~Handler();
+    virtual ~Handler();
 
-	bool sendMessageAtTime(Message& msg, long uptimeMillis);
-	bool sendMessage(Message& msg);
-	bool sendEmptyMessage(int what);
-	bool sendEmptyMessage(int what, long uptimeMillis);
+    bool sendMessageAtTime(Message& msg, long uptimeMillis);
+    bool sendMessage(Message& msg);
+    bool sendEmptyMessage(int what);
+    bool sendEmptyMessage(int what, long uptimeMillis);
 
-	bool post(Message::Function f);
-	bool postAtTime(Message::Function f, long uptimeMillis);
+    bool post(Message::Function f);
+    bool postAtTime(Message::Function f, long uptimeMillis);
 
-	void removeMessages(int what);
-	void removeCallbackAndMessages();
+    void removeMessages(int what);
+    void removeCallbackAndMessages();
 
-	void stopSafty(bool stopSafty);
+    void stopSafty(bool stopSafty);
 
-	bool isQuiting();
+    bool isQuiting();
 
-	virtual void handleMessage(Message& msg);
+    virtual void handleMessage(Message& msg);
 
-	void dispatchMessage(Message& msg);
+    void dispatchMessage(Message& msg);
 
     bool setMsgCallback(MessageCallback cb);
-    
-	void dumpMsgQueue();
 
-	/*
-	 * for msgQueue sorted when insert,
-	 * ascending order
-	 */
-	template<class T>
-	class ValComp {
-	public:
-		bool operator()(const T& t1,const T& t2) const {
-			return (t1 < t2);
-		}
+    void dumpMsgQueue();
 
-	};
+    /*
+     * for msgQueue sorted when insert,
+     * ascending order
+     */
+    template<class T>
+    class ValComp {
+    public:
+        bool operator()(const T& t1,const T& t2) const {
+            return (t1 < t2);
+        }
+    };
 
-
-private:
-	bool __syncMoidfyMsgQueue(bool bAdd, Message msg, int timeout);
 
 private:
-	std::vector<Message> msg_Q;
+    bool __syncMoidfyMsgQueue(bool bAdd, Message msg, int timeout);
 
-	std::mutex queue_mutex;
-	std::condition_variable condition;
-	std::thread looper;
-	bool stop;
-	bool stopWhenEmpty;
-	TASK_WAIT_STATE_E mWaitState;
+private:
+    std::vector<Message> msg_Q;
+    std::mutex queue_mutex;
+    std::condition_variable condition;
+    std::thread looper;
+    bool stop;
+    bool stopWhenEmpty;
+    TASK_WAIT_STATE_E mWaitState;
     MessageCallback msgCb;
 };
 

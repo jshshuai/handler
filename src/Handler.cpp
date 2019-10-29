@@ -7,9 +7,13 @@
 #include <algorithm>
 #include <iostream>
 #include <chrono>
+#include <sys/types.h>
+#include <unistd.h>
 #include "Handler.h"
 #include "Message.h"
 #include <sys/time.h>
+#include <sys/syscall.h>
+
 
 #define LOGENTER (std::cout << "This is FUNCTION " << __func__<<  std::endl)
 
@@ -26,13 +30,34 @@ long getCurrentTime()
 #endif
 
 
+
+static Handler* pHandler = NULL;
+
+
+/*
+*这个只作为全局使用，postDealy这种处理，如果需要sendmessage能力，
+*请自行创建实例，不要使用静态对象.
+*可使用类似异步处理执行方法，异步延时处理方法，删除未执行的方法等.
+*/
+Handler* Handler::getInstance(){
+    if(NULL == pHandler){
+        static Handler handler;
+        pHandler = &handler;
+    }
+    return pHandler;
+}
+
 Handler::Handler():Handler(NULL){};
 
 Handler::Handler(MessageCallback cb):stop(false),stopWhenEmpty(false),mWaitState(TASK_WAIT_STATE_NONE_E){
     msgCb = cb;
     looper = std::thread(
         [this](){
-            cout << "handler thread in" << endl;
+            cout << "handler thread in pid:" << getpid() << " tid:"  << pthread_self() << endl;
+            //  cout << "pthread_self id : " << pthread_self() << endl; ===>POSI threadid 内部转换过的
+            // cout << "gettid id : " << syscall(SYS_gettid) << endl; 
+            // ====>对接linux内核外部显示的id，比如top 查看对应的id
+            
             for(;;)
             {
                 Message msg;
@@ -152,7 +177,7 @@ bool Handler::__syncMoidfyMsgQueue(bool bAdd, Message msg, int timeout){
             bRefresh = true;
         }
         while(1) {
-            auto i = find(msg_Q.begin(), msg_Q.end(), msg.m_what);
+            auto i = find(msg_Q.begin(), msg_Q.end(), msg);
             if (i != msg_Q.end()) {
                 cout << "remove msg.what : " << msg.m_what << endl;
                 msg_Q.erase(i);
@@ -202,25 +227,53 @@ bool Handler::sendEmptyMessage(int what,long uptimeMillis){
     return true;
 }
 
+
+
+
 bool Handler::post(Message::Function f){
-    return postAtTime(f,0);
+    return postAtTime(f, NULL, 0);
 }
+
+//void* args会通过回调函数回传给使用者
+bool Handler::post(Message::Function f, void* args){
+	return postAtTime(f, args, 0);
+}
+
 bool Handler::postAtTime(Message::Function f, long uptimeMillis){
-    if(f == nullptr || uptimeMillis < 0){
-        return false;
-    }
-    Message msg;
-    msg.setFunction(f);
-    cout << "postAtTime " << uptimeMillis << endl;
-    __syncMoidfyMsgQueue(true, msg, uptimeMillis);
-    return true;
+	return postAtTime(f, NULL, uptimeMillis);
 }
+
+/*
+ * f : 需要异步回调的函数
+ * args : 需要回传的参数,目前暂时设计为指针类型 可自由转换
+ * uptimeMillis: 超时时间　单位毫秒
+ */
+bool Handler::postAtTime(Message::Function f, void* args, long uptimeMillis){
+	if(!f || uptimeMillis < 0){
+		return false;
+	}
+	Message msg(0, (long)args);
+	msg.setFunction(f);
+	__syncMoidfyMsgQueue(true, msg, uptimeMillis);
+	return true;
+}
+
 
 void Handler::removeMessages(int what){
     if(what < 0)
         return;
     
     Message msg(what);
+    __syncMoidfyMsgQueue(false, msg, 0);
+}
+
+void Handler::removePostFuntion(Message::Function f){
+    if(f == NULL){
+        return;
+    }
+
+    Message msg;
+    msg.setFunction(f);
     __syncMoidfyMsgQueue(false, msg, 0);
 }
 
@@ -249,8 +302,8 @@ bool Handler::isQuiting(){
 }
 
 void Handler::dispatchMessage(Message& msg){
-    if(msg.task != nullptr){
-        msg.task();
+    if(msg.task != NULL){
+        msg.task((void*)msg.m_arg1);
     }else{
         if(msg.m_what < 0)
             return;

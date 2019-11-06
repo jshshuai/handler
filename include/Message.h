@@ -13,17 +13,21 @@
 #include <iostream>
 #include <condition_variable>
 
-
-
 using namespace std;
+
+
 
 class Message{
 public:
+
     int m_what;
-    int m_arg1;
-    int m_arg2;
+    long m_arg1;
+    long m_arg2;
     string m_str;
-    typedef std::function<void()> Function;
+
+   // typedef std::function<void()> Function;  //c++这种方式没法强制转换.用下面c的方式代替使用.
+    typedef void(*Function)(void* args);
+
     Function task;
 
     std::chrono::system_clock::time_point when;
@@ -31,11 +35,11 @@ public:
 public:
     Message();
     Message(int what);
-    Message(int what, int arg1);
-    Message(int what, int arg1, int arg2);
-    Message(int what, int arg1, int arg2, long uptimeMillis);
-    Message(int what, int arg1, string str);
-    Message(int what, int arg1, string str, long uptimeMillis);
+    Message(int what, long arg1);
+    Message(int what, long arg1, long arg2);
+    Message(int what, long arg1, long arg2, long uptimeMillis);
+    Message(int what, long arg1, string str);
+    Message(int what, long arg1, string str, long uptimeMillis);
 
     virtual ~Message();
 
@@ -58,7 +62,7 @@ public:
     }
 
     bool operator==(const Message& msg) const {
-        return (this->m_what == msg.m_what);
+        return (this->m_what == msg.m_what && this->task == msg.task);
     }
 
     bool operator==(int what) const {

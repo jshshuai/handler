@@ -35,30 +35,33 @@ public:
     typedef std::function<void(Message& msg)> MessageCallback;
 
 public:
+    static Handler* getInstance();
+
+
+public:
     Handler();
-    Handler(MessageCallback cb);
+    Handler(MessageCallback cb);    
     virtual ~Handler();
 
+    bool setMsgCallback(MessageCallback cb);
     bool sendMessageAtTime(Message& msg, long uptimeMillis);
     bool sendMessage(Message& msg);
     bool sendEmptyMessage(int what);
     bool sendEmptyMessage(int what, long uptimeMillis);
 
     bool post(Message::Function f);
+	bool post(Message::Function f, void* args);
     bool postAtTime(Message::Function f, long uptimeMillis);
+	bool postAtTime(Message::Function f, void* args, long uptimeMillis);
 
     void removeMessages(int what);
+    void removePostFuntion(Message::Function f);
+
     void removeCallbackAndMessages();
-
     void stopSafty(bool stopSafty);
-
     bool isQuiting();
-
     virtual void handleMessage(Message& msg);
-
     void dispatchMessage(Message& msg);
-
-    bool setMsgCallback(MessageCallback cb);
 
     void dumpMsgQueue();
 
@@ -86,7 +89,7 @@ private:
     bool stop;
     bool stopWhenEmpty;
     TASK_WAIT_STATE_E mWaitState;
-    MessageCallback msgCb;
+    MessageCallback msgCb;    
 };
 
 #endif
